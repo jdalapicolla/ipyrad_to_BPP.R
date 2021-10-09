@@ -4,7 +4,10 @@
 
 
 
+
 ### Script prepared by Jeronymo Dalapicolla ###
+
+
 
 
 #### PRE-ANALYSIS #### 
@@ -20,7 +23,7 @@
 #### OPTIONAL OPTIONS:
 #B. SELECT LOCI THAT HAVE LESS MISSING DATA;
 #C. SELECT A SPECIFIC NUMBER OF LOCI;
-#D. REDUCE THE NUMBER OF INDIVIDUALS BY POPULATION;
+#D. REDUCE THE NUMBER OF INDIVIDUALS BY POPULATION TO MAXIMUM THREE;
 
 
 
@@ -81,7 +84,13 @@ for(i in 1:length(break.lines)){
 head(len_loci)
 tail(len_loci)
 
-#In case you wish use all loci regardless missing data, run these lines:
+#In case you wish to use all loci regardless missing data. GO TO STEP 5A
+
+#In case you wish to subset your loci by missing data. GO TO STEP 5B
+
+
+
+####5A. Transform your loci in a list ----
 loci_subset = length(break.lines)
 index_loci = len_loci
 
@@ -93,13 +102,14 @@ for (j in 1:loci_subset){
   final_line = index_loci$FinalLine[j]
   loci[[loop]] = matrix_alig[c(initial_line:final_line)]
 }
+
 #verify first and last locus
 loci[[1]]
 loci[[loci_subset]]
 
 
 
-###5. OPTIONAL: Subset a number of loci with more individuals (less missing data) ----
+###5B. Subset a number of loci with more individuals (less missing data) and transform them in a list ----
 loci_subset = 200 #choose number of loci here!
 index_loci = len_loci[order(len_loci$SampleSize, decreasing = T),]
 index_loci = index_loci[1:loci_subset,1:length(names(len_loci))]
@@ -112,7 +122,7 @@ for (j in 1:loci_subset){
   initial_line = index_loci$InitialLine[j]
   final_line = index_loci$FinalLine[j]
   loci[[loop]] = matrix_alig[c(initial_line:final_line)]
-  }
+}
 #verify first and last locus
 loci[[1]]
 loci[[loci_subset]]
@@ -131,7 +141,39 @@ head(index_replace)
 
 
 
-###7. OPTIONAL: Reduce to three individuals to population. You can edit this number in the loop ---- 
+#In case you wish to use all individuals. GO TO STEP 7A
+
+#In case you wish to reduce number of individuals by pop. GO TO STEP 7B
+
+
+
+###7A.  Rename individuals by order in the tree files and add a header by loci:
+ind_reduced = loci
+
+final_renamed = list()
+for (k in 1:loci_subset){
+  temp = ind_reduced[[k]]
+  for (l in 1:length(index_replace$ID)){
+    temp = gsub(index_replace$ID[l], paste0(index_replace$CLADES[l],"_",index_replace$ORDER[l]), temp)
+  }
+  string.ed = temp[1]
+  find.p = '[[:alnum:]_]+[[:space:]]+'
+  sub.pa = ''
+  temp.dna.seq = sub(find.p,sub.pa,string.ed)
+  dna.seq = strsplit(temp.dna.seq, '')
+  loci.length = length(dna.seq[[1]])
+  header = paste(length(temp), loci.length , collapse = " ")
+  final_renamed[[k]] = c(header, temp)
+} 
+
+#verify first and last locus
+final_renamed[[1]]
+final_renamed [[loci_subset]]
+
+
+
+###7B. Subset individuals in a population and Rename individuals by order in the tree files and add a header by loci. You can edit the number of individuals inside the loop ---- 
+#rename individuals by pop/clades
 ind_renamed = list()
 
 for (k in 1:loci_subset){
@@ -140,18 +182,19 @@ for (k in 1:loci_subset){
     renamed_ind = stringr::str_replace(renamed_ind, index_replace$ID[l], index_replace$NAME[l])
   }
   ind_renamed[[k]] = renamed_ind
-} 
+}
+
 #verify first and last locus
 ind_renamed[[1]]
 ind_renamed[[loci_subset]]
 
-#7. Keep only three individuals by population to reduced sample size
+#keep only three individuals by population to reduced sample size
 ind_reduced = list()
 for (m in 1:loci_subset){
   input = ind_renamed[[m]]
   ref01 = input[input %in% grep(paste0("_01", collapse = "|"), input, value = T)]
   ref02 = input[input %in% grep(paste0("_02", collapse = "|"), input, value = T)]
-  ref03 = input[input %in% grep(paste0("_03", collapse = "|"), input, value = T)] # you can copy this line to put 4, 5... individuals
+  ref03 = input[input %in% grep(paste0("_03", collapse = "|"), input, value = T)] # you can copy this line to put 4, 5... individuals or change for the code of population/clade
   input = c(ref01, ref02, ref03) #change here if you keep more then 3 individuals
   string.ed = input[1]
   find.p = '[[:alnum:]_]+[[:space:]]+'
@@ -162,22 +205,17 @@ for (m in 1:loci_subset){
   header = paste(length(input), loci.length , collapse = " ")
   ind_reduced[[m]] = c(header, input)
 }
+
 #verify first and last locus
 ind_reduced[[1]]
 ind_reduced[[loci_subset]]
 
-
-
-###8. Rename individuals by order in the tree files ----
-head(index_replace)
-
-
-#If you run step 7 to remove individuals:
+# rename individuals by order in the tree files
 final_renamed = list()
 for (k in 1:loci_subset){
   temp = ind_reduced[[k]]
   for (l in 1:length(index_replace$ID)){
-  temp = gsub(index_replace$NAME[l], paste0(index_replace$CLADES[l],"_",index_replace$ORDER[l]), temp)
+    temp = gsub(index_replace$NAME[l], paste0(index_replace$CLADES[l],"_",index_replace$ORDER[l]), temp)
   }
   final_renamed[[k]] = temp
 }  
@@ -186,25 +224,7 @@ final_renamed[[1]]
 final_renamed [[loci_subset]]
 
 
-#If you DIDN'T run step 7 to remove individuals:
-ind_reduced = loci
-
-final_renamed = list()
-for (k in 1:loci_subset){
-  temp = ind_reduced[[k]]
-  for (l in 1:length(index_replace$ID)){
-    temp = gsub(index_replace$ID[l], paste0(index_replace$CLADES[l],"_",index_replace$ORDER[l]), temp)
-  }
-  final_renamed[[k]] = temp
-} 
-
-#verify first and last locus
-final_renamed[[1]]
-final_renamed [[loci_subset]]
-
-
-
-####9. Merge all loci into a single files replaces "_" and save it.
+###8. Merge all loci into a single files replaces "_" and save it ----
 bpp_file = c()
 for (p in 1:loci_subset){
   add_file = as.character(final_renamed[[p]])
@@ -215,8 +235,8 @@ for (p in 1:loci_subset){
   bpp_file = c(bpp_file, add_file)
 }
 
-
-write.table(bpp_file, "input_genomics_bpp.loci", append = FALSE, sep = "\n", quote = F, row.names = F, col.names = F)
+###9. Save the BPP input ----
+write.table(bpp_file, "input_genomics_bpp_full.loci", append = FALSE, sep = "\n", quote = F, row.names = F, col.names = F)
 
 
 
